@@ -1,16 +1,17 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export class FovusInfraCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
-
-    // example resource
-    // const queue = new sqs.Queue(this, 'FovusInfraCdkQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    const dbTable = new dynamodb.Table(this, 'DbTable', {
+      tableName: 'fovus-table',
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
   }
 }
