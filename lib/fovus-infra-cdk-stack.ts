@@ -6,16 +6,22 @@ import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { IFovusInfraCdkStackProps } from '../bin/stack-config-types';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
 export class FovusInfraCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: IFovusInfraCdkStackProps) {
     super(scope, id, props);
 
+    const ec2Vpc = ec2.Vpc.fromLookup(this, 'DefaultVpc', {
+      isDefault: true,
+    });
+
     const dbTable = new dynamodb.Table(this, 'DbTable', {
       tableName: 'fovus-table',
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
+      stream: dynamodb.StreamViewType.NEW_IMAGE,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
@@ -23,7 +29,7 @@ export class FovusInfraCdkStack extends cdk.Stack {
       functionName: 'ec2trigger',
       description: 'triggers ec2 instance',
       runtime: lambda.Runtime.NODEJS_LATEST,
-      handler: 'fovustrigger.handler',
+      handler: 'ec2trigger.handler',
       code: new lambda.AssetCode('dist/src'),
       timeout: cdk.Duration.seconds(500),
     });
@@ -104,6 +110,47 @@ export class FovusInfraCdkStack extends cdk.Stack {
         s3.HttpMethods.HEAD,
       ],
       allowedHeaders: ['*'], // Allow any headers
+    });
+
+    const ec2TriggerPermission = new iam.PolicyStatement({
+      actions: ['*'],
+      resources: ['*'],
+    });
+    trigger.addToRolePolicy(ec2TriggerPermission);
+
+    // Create the IAM role for S3 access
+    const s3AccessRole = new iam.Role(this, 'S3AccessRole', {
+      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      roleName: 'FovusS3AccessRole',
+    });
+
+    // Attach a policy granting full access to S3
+    s3AccessRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:*'],
+        resources: ['*'], // Provide full access to all S3 resources
+      })
+    );
+
+    const instanceProfile = new iam.InstanceProfile(
+      this,
+      'Ec2InstanceProfile',
+      {
+        instanceProfileName: 'FovusS3AccessRole',
+        role: s3AccessRole,
+      }
+    );
+
+    const ec2SecurityGroup = new ec2.SecurityGroup(this, 'FovusSecurityGroup', {
+      securityGroupName: 'FovusSecurityGroup',
+      vpc: ec2Vpc,
+    });
+
+    // Allow inbound traffic from anywhere on all ports
+    ec2SecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic());
+
+    const ec2KeyPair = new ec2.KeyPair(this, 'FovusKeyPair', {
+      keyPairName: 'fovuskeypair',
     });
   }
 }

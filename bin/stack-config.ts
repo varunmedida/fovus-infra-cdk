@@ -1,6 +1,10 @@
 import { IFovusInfraCdkStackProps } from './stack-config-types';
 
 const environmentConfig: IFovusInfraCdkStackProps = {
+  env: {
+    region: 'us-east-1', //These have to be changed (Give your region)
+    account: '533267389516', //These have to be changed (Give your account number)
+  },
   tags: {
     Developer: 'Varun Medida',
     Application: 'CdkFovusTsInfra',

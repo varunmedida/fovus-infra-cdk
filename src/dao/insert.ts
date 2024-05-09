@@ -18,6 +18,7 @@ export async function insert(body: string | null) {
   try {
     const bodyParsed = JSON.parse(body) as IPost;
 
+    console.log('bodyParsed', bodyParsed);
     // Prepare the item to insert into DynamoDB
     const params = {
       TableName: 'fovus-table', // Your DynamoDB table name
