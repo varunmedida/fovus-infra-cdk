@@ -1,14 +1,13 @@
-# Welcome to your CDK TypeScript project
+# Welcome to Fovus Coding challenge Infrastructure setup using aws cdk
 
-This is a blank project for CDK development with TypeScript.
-
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
-
-## Useful commands
-
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+1. aws configure (for this make sure aws-cli is installed)
+2. Make sure aws-cdk is installed (npm install aws-cdk)
+3. After pulling the repository into your system
+4. From terminal go to the project and run npm install
+5. Go to bin/stack-config.ts
+6. Change the env properties matching to your account and region.
+7. Run command npm run build
+8. Perform cdk synth
+9. Perform cdk bootstrap
+10. Run command cdk deploy
+11. In the terminal you will find the steps and at last the output is the endpoint url
