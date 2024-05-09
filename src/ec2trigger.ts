@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/client-ec2';
 import { IAMClient } from '@aws-sdk/client-iam';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import environmentConfig from '../bin/stack-config';
 
 export const handler = async (event: any) => {
   let filePath = event.Records[0].dynamodb.NewImage.filePath?.S;
@@ -58,11 +59,11 @@ export const handler = async (event: any) => {
     console.log('Were are at line 58');
     const command = new RunInstancesCommand({
       // Your key pair name.
-      KeyName: 'fovuskeypair',
+      KeyName: environmentConfig.ec2KeyPair.keyPairName,
       // Your security group.
-      SecurityGroups: ['FovusSecurityGroup'],
+      SecurityGroups: [environmentConfig.ec2SecurityGroup.securityGroupName],
       // An x86_64 compatible image.
-      ImageId: 'ami-07caf09b362be10b8',
+      ImageId: environmentConfig.ec2Instance.imageId,
       // An x86_64 compatible free-tier instance type.
       InstanceType: 't2.micro',
       UserData: Buffer.from(
@@ -76,7 +77,9 @@ export const handler = async (event: any) => {
       ).toString('base64'),
       MinCount: 1,
       MaxCount: 1,
-      IamInstanceProfile: { Name: 'FovusS3AccessRole' },
+      IamInstanceProfile: {
+        Name: environmentConfig.ec2InstanceProfile.instanceProfileName,
+      },
     });
     const response = await ec2.send(command);
     console.log(response);

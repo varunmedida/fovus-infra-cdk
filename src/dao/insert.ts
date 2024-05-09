@@ -5,7 +5,7 @@ import { createResponse } from '../fileupload';
 
 const dynamoDB = new DynamoDB();
 
-export async function insert(body: string | null) {
+export async function insert(body: string | null, url: string) {
   if (!body) {
     return {
       statusCode: 400,
@@ -32,6 +32,7 @@ export async function insert(body: string | null) {
     return createResponse(200, {
       message: 'Data inserted successfully',
       item: bodyParsed,
+      url: url,
     });
   } catch (error) {
     console.error('Error:', error);

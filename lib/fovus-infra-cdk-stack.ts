@@ -13,26 +13,30 @@ export class FovusInfraCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: IFovusInfraCdkStackProps) {
     super(scope, id, props);
 
-    const ec2Vpc = ec2.Vpc.fromLookup(this, 'DefaultVpc', {
+    const ec2Vpc = ec2.Vpc.fromLookup(this, props?.vpc.id ?? 'DefaultVpc', {
       isDefault: true,
     });
 
-    const dbTable = new dynamodb.Table(this, 'DbTable', {
-      tableName: 'fovus-table',
+    const dbTable = new dynamodb.Table(this, props?.dynamoDb.id ?? 'DbTable', {
+      tableName: props?.dynamoDb.tableName,
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       stream: dynamodb.StreamViewType.NEW_IMAGE,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const trigger = new lambda.Function(this, 'LambdaTrigger', {
-      functionName: 'ec2trigger',
-      description: 'triggers ec2 instance',
-      runtime: lambda.Runtime.NODEJS_LATEST,
-      handler: 'ec2trigger.handler',
-      code: new lambda.AssetCode('dist/src'),
-      timeout: cdk.Duration.seconds(500),
-    });
+    const trigger = new lambda.Function(
+      this,
+      props?.triggerLambda.id ?? 'LambdaTrigger',
+      {
+        functionName: props?.triggerLambda.name,
+        description: props?.triggerLambda.desc,
+        runtime: lambda.Runtime.NODEJS_LATEST,
+        handler: props?.triggerLambda.handler ?? 'ec2trigger.handler',
+        code: new lambda.AssetCode('dist/src'),
+        timeout: cdk.Duration.seconds(500),
+      }
+    );
 
     trigger.addEventSource(
       new DynamoEventSource(dbTable, {
@@ -40,22 +44,26 @@ export class FovusInfraCdkStack extends cdk.Stack {
       })
     );
 
-    const resolver = new lambda.Function(this, 'LambdaResolver', {
-      functionName: props?.lambda.name,
-      description: props?.lambda.desc,
-      handler: 'fileupload.handler',
-      code: new lambda.AssetCode('dist/src'),
-      runtime: lambda.Runtime.NODEJS_LATEST,
-      environment: {
-        DB_TABLE_NAME: dbTable.tableName,
-      },
-    });
+    const resolver = new lambda.Function(
+      this,
+      props?.uploadLambda.id ?? 'LambdaResolver',
+      {
+        functionName: props?.uploadLambda.name,
+        description: props?.uploadLambda.desc,
+        handler: props?.uploadLambda.handler ?? 'fileupload.handler',
+        code: new lambda.AssetCode('dist/src'),
+        runtime: lambda.Runtime.NODEJS_LATEST,
+        environment: {
+          DB_TABLE_NAME: dbTable.tableName,
+        },
+      }
+    );
 
     dbTable.grantReadWriteData(resolver);
 
     const integration = new apigateway.LambdaIntegration(resolver);
 
-    const api = new apigateway.RestApi(this, 'FileUploadApi', {
+    const api = new apigateway.RestApi(this, props?.api.id ?? 'FileUploadApi', {
       restApiName: props?.api.name,
       description: props?.api.desc,
       defaultCorsPreflightOptions: {
@@ -65,7 +73,7 @@ export class FovusInfraCdkStack extends cdk.Stack {
     });
 
     // API Gateway Model
-    const model = new apigateway.Model(this, 'Model', {
+    const model = new apigateway.Model(this, props?.api.modelId ?? 'Model', {
       modelName: props?.api.modelName,
       restApi: api,
       schema: {
@@ -83,7 +91,9 @@ export class FovusInfraCdkStack extends cdk.Stack {
     const rootResource = api.root.addResource(props?.api.rootResource ?? 'v1');
 
     // Open Resource and Methods
-    const openResource = rootResource.addResource('file');
+    const openResource = rootResource.addResource(
+      props?.api.fileResource ?? 'file'
+    );
 
     ['POST'].map((method) => {
       openResource.addMethod(method, integration, {
@@ -93,10 +103,10 @@ export class FovusInfraCdkStack extends cdk.Stack {
     });
 
     // S3 Bucket
-    const bucket = new s3.Bucket(this, 'FovusFiles', {
-      bucketName: 'fovus-files',
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // Optional: specify removal policy
-      autoDeleteObjects: true, // Optional: automatically delete objects when bucket is removed
+    const bucket = new s3.Bucket(this, props?.s3Bucket.id ?? 'FovusFiles', {
+      bucketName: props?.s3Bucket.name,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
     // Add CORS configuration to S3 bucket
@@ -112,6 +122,8 @@ export class FovusInfraCdkStack extends cdk.Stack {
       allowedHeaders: ['*'], // Allow any headers
     });
 
+    bucket.grantReadWrite(resolver);
+
     const ec2TriggerPermission = new iam.PolicyStatement({
       actions: ['*'],
       resources: ['*'],
@@ -119,10 +131,16 @@ export class FovusInfraCdkStack extends cdk.Stack {
     trigger.addToRolePolicy(ec2TriggerPermission);
 
     // Create the IAM role for S3 access
-    const s3AccessRole = new iam.Role(this, 'S3AccessRole', {
-      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
-      roleName: 'FovusS3AccessRole',
-    });
+    const s3AccessRole = new iam.Role(
+      this,
+      props?.s3AccessRole.id ?? 'S3AccessRole',
+      {
+        assumedBy: new iam.ServicePrincipal(
+          props?.s3AccessRole.service ?? 'ec2.amazonaws.com'
+        ),
+        roleName: props?.s3AccessRole.roleName,
+      }
+    );
 
     // Attach a policy granting full access to S3
     s3AccessRole.addToPolicy(
@@ -132,25 +150,33 @@ export class FovusInfraCdkStack extends cdk.Stack {
       })
     );
 
-    const instanceProfile = new iam.InstanceProfile(
+    new iam.InstanceProfile(
       this,
-      'Ec2InstanceProfile',
+      props?.ec2InstanceProfile.id ?? 'Ec2InstanceProfile',
       {
-        instanceProfileName: 'FovusS3AccessRole',
+        instanceProfileName: props?.ec2InstanceProfile.instanceProfileName,
         role: s3AccessRole,
       }
     );
 
-    const ec2SecurityGroup = new ec2.SecurityGroup(this, 'FovusSecurityGroup', {
-      securityGroupName: 'FovusSecurityGroup',
-      vpc: ec2Vpc,
-    });
+    const ec2SecurityGroup = new ec2.SecurityGroup(
+      this,
+      props?.ec2SecurityGroup.id ?? 'FovusSecurityGroup',
+      {
+        securityGroupName: props?.ec2SecurityGroup.securityGroupName,
+        vpc: ec2Vpc,
+      }
+    );
 
     // Allow inbound traffic from anywhere on all ports
     ec2SecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic());
 
-    const ec2KeyPair = new ec2.KeyPair(this, 'FovusKeyPair', {
-      keyPairName: 'fovuskeypair',
-    });
+    const ec2KeyPair = new ec2.KeyPair(
+      this,
+      props?.ec2KeyPair.id ?? 'FovusKeyPair',
+      {
+        keyPairName: props?.ec2KeyPair.keyPairName,
+      }
+    );
   }
 }
