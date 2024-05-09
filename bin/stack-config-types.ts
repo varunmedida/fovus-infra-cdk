@@ -50,9 +50,6 @@ export interface IFovusInfraCdkStackProps extends StackProps {
     id: string;
     keyPairName: string;
   };
-  ec2Instance: {
-    imageId: string;
-  };
 }
 
 export interface IPost {

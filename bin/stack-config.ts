@@ -58,9 +58,6 @@ const environmentConfig: IFovusInfraCdkStackProps = {
     id: 'FovusKeyPair',
     keyPairName: 'fovuskeypair',
   },
-  ec2Instance: {
-    imageId: 'ami-07caf09b362be10b8',
-  },
 };
 
 export default environmentConfig;

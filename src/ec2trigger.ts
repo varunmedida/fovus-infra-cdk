@@ -9,6 +9,10 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import environmentConfig from '../bin/stack-config';
 
 export const handler = async (event: any) => {
+  const keyName = 'fovuskeypair';
+  const securityGroup = 'FovusSecurityGroup';
+  const imageId = 'ami-07caf09b362be10b8';
+  const instanceType = 't2.micro';
   let filePath = event.Records[0].dynamodb.NewImage.filePath?.S;
   let text = event.Records[0].dynamodb.NewImage.text?.S;
   const [bucketName, filename] = filePath.split('/');
@@ -59,13 +63,13 @@ export const handler = async (event: any) => {
     console.log('Were are at line 58');
     const command = new RunInstancesCommand({
       // Your key pair name.
-      KeyName: environmentConfig.ec2KeyPair.keyPairName,
+      KeyName: keyName,
       // Your security group.
-      SecurityGroups: [environmentConfig.ec2SecurityGroup.securityGroupName],
+      SecurityGroups: [securityGroup],
       // An x86_64 compatible image.
-      ImageId: environmentConfig.ec2Instance.imageId,
+      ImageId: imageId,
       // An x86_64 compatible free-tier instance type.
-      InstanceType: 't2.micro',
+      InstanceType: instanceType,
       UserData: Buffer.from(
         `#!/bin/bash
         aws s3 cp s3://${bucketName}/script.sh ./
