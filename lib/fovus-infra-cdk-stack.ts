@@ -38,6 +38,8 @@ export class FovusInfraCdkStack extends cdk.Stack {
       }
     );
 
+    dbTable.grantReadWriteData(trigger);
+
     trigger.addEventSource(
       new DynamoEventSource(dbTable, {
         startingPosition: lambda.StartingPosition.LATEST,
