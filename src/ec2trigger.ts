@@ -5,10 +5,8 @@ import {
   waitUntilInstanceStatusOk,
 } from '@aws-sdk/client-ec2';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { DynamoDB } from '@aws-sdk/client-dynamodb';
 
 export const handler = async (event: any) => {
-  const dynamoDB = new DynamoDB();
   const records = event.Records;
   for (let i = 0; i < records.length; i++) {
     const record = records[i];
