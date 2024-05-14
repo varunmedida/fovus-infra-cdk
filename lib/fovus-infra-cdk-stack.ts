@@ -147,7 +147,7 @@ export class FovusInfraCdkStack extends cdk.Stack {
     // Attach a policy granting full access to S3
     s3AccessRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['s3:*'],
+        actions: ['s3:*', 'dynamodb:*'],
         resources: ['*'], // Provide full access to all S3 resources
       })
     );
