@@ -23,13 +23,19 @@ export const handler = async (event: any) => {
 
     if (text !== undefined) {
       let [bucketName, filename] = filePath.split('/');
-      filename = filename.substring(0, filename.lastIndexOf('.'));
+      let outputFilename = filename.substring(0, filename.lastIndexOf('.'));
       console.log('This is the filepath:' + filename);
       console.log('This is the text:' + text);
 
       await programmaticUploadScriptToS3();
 
-      await runInstanceAndUploadOutputFileToS3(bucketName, filename, text);
+      await runInstanceAndUploadOutputFileToS3(
+        bucketName,
+        filename,
+        text,
+        id,
+        outputFilename
+      );
     }
   }
 };
@@ -37,7 +43,9 @@ export const handler = async (event: any) => {
 async function runInstanceAndUploadOutputFileToS3(
   bucketName: any,
   filename: any,
-  text: any
+  text: any,
+  id: string,
+  outputFilename: string
 ) {
   const ec2 = new EC2Client({ region: 'us-east-1' });
   const keyName = 'fovuskeypair';
@@ -50,10 +58,10 @@ async function runInstanceAndUploadOutputFileToS3(
   aws s3 cp s3://${bucketName}/${filename} ./
   chmod +x script.sh
   ./script.sh "${filename}" "${text}"
-  aws s3 cp ${filename} s3://${bucketName}/${filename}_output.txt
+  aws s3 cp ${filename} s3://${bucketName}/${outputFilename}_output.txt
   aws dynamodb put-item \
     --table-name fovus-table \
-    --item '{"pk": {"S": "1"}, "id": {"S": "1"}, "output_file_path": {"S": "${bucketName}/${filename}_output.txt"}}'
+    --item '{"pk": {"S": "${id}"}, "id": {"S": "${id}"}, "output_file_path": {"S": "${bucketName}/${outputFilename}_output.txt"}}'
         `;
 
   try {
