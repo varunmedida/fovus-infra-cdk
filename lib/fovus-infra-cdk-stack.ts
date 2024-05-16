@@ -35,6 +35,9 @@ export class FovusInfraCdkStack extends cdk.Stack {
         handler: props?.triggerLambda.handler ?? 'ec2trigger.handler',
         code: new lambda.AssetCode('dist/src'),
         timeout: cdk.Duration.seconds(500),
+        environment: {
+          BUCKET_NAME: props?.s3Bucket.name ?? 'fovus-files',
+        },
       }
     );
 

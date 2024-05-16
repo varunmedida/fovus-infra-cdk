@@ -133,7 +133,7 @@ async function programmaticUploadScriptToS3() {
   fi`;
 
   const putScriptParams = new PutObjectCommand({
-    Bucket: 'fovus-files', //Change bucket name here
+    Bucket: process.env.BUCKET_NAME, //Change bucket name here
     Key: 'script.sh',
     Body: scriptContent,
   });
